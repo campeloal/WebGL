@@ -1,12 +1,15 @@
-
-var main=function() {
-
-  var CANVAS=document.getElementById("your_canvas");
+var getWebGLCanvas = function()
+{
+  var CANVAS = document.getElementById("webgl_canvas");
 
   CANVAS.width=window.innerWidth;
   CANVAS.height=window.innerHeight;
 
-  /*========================= GET WEBGL CONTEXT ========================= */
+
+  return CANVAS;
+};
+
+var getWebGLContext=function(CANVAS){
   var GL;
   try {
     GL = CANVAS.getContext("experimental-webgl", {antialias: true});
@@ -15,8 +18,53 @@ var main=function() {
     return false;
   }
 
+  return GL;
+};
+
+Shader = function(GL,vertexShaderSource,fragmentShaderSource){
+  this.GL = GL;
+  this.vertexShaderSource = vertexShaderSource;
+  this.fragmentShaderSource = fragmentShaderSource;
+  this.vertexShader;
+  this.fragmentShader;
+  this.program;
+
+  this.compileShaders=function() {
+    this.vertexShader = GL.createShader(GL.VERTEX_SHADER);
+    this.fragmentShader = GL.createShader(GL.FRAGMENT_SHADER);
+
+    GL.shaderSource(this.vertexShader, this.vertexShaderSource);
+    GL.shaderSource(this.fragmentShader, this.fragmentShaderSource);
+    GL.compileShader(this.vertexShader);
+    GL.compileShader(this.fragmentShader);
+
+    if (!GL.getShaderParameter(this.vertexShader, GL.COMPILE_STATUS)) {
+      alert("ERROR IN VERTEX SHADER : " + GL.getShaderInfoLog(this.vertexShader));
+    }
+
+    if (!GL.getShaderParameter(this.fragmentShader, GL.COMPILE_STATUS)) {
+      alert("ERROR IN FRAGMENT SHADER : " + GL.getShaderInfoLog(this.fragmentShader));
+    }
+  };
+
+    this.attachAndLinkShaders = function(){
+      this.program =GL.createProgram();
+      GL.attachShader(this.program, this.vertexShader);
+      GL.attachShader(this.program, this.fragmentShader);
+
+      GL.linkProgram(this.program);
+    };
+
+}
+
+var main=function() {
+
+  var CANVAS = getWebGLCanvas();
+
+  var GL=getWebGLContext(CANVAS);
+  
+  
   /*========================= SHADERS ========================= */
-  /*jshint multistr: true */
   var shader_vertex_source="\n\
 attribute vec2 position; //the position of the point\n\
 attribute vec3 color;  //the color of the point\n\
@@ -39,34 +87,17 @@ gl_FragColor = vec4(vColor, 1.);\n\
 }";
 
 
-  var get_shader=function(source, type, typeString) {
-    var shader = GL.createShader(type);
-    GL.shaderSource(shader, source);
-    GL.compileShader(shader);
-    if (!GL.getShaderParameter(shader, GL.COMPILE_STATUS)) {
-      alert("ERROR IN "+typeString+ " SHADER : " + GL.getShaderInfoLog(shader));
-      return false;
-    }
-    return shader;
-  };
-
-  var shader_vertex=get_shader(shader_vertex_source, GL.VERTEX_SHADER, "VERTEX");
-
-  var shader_fragment=get_shader(shader_fragment_source, GL.FRAGMENT_SHADER, "FRAGMENT");
-
-  var SHADER_PROGRAM=GL.createProgram();
-  GL.attachShader(SHADER_PROGRAM, shader_vertex);
-  GL.attachShader(SHADER_PROGRAM, shader_fragment);
-
-  GL.linkProgram(SHADER_PROGRAM);
-
-  var _color = GL.getAttribLocation(SHADER_PROGRAM, "color");
-  var _position = GL.getAttribLocation(SHADER_PROGRAM, "position");
+  var shader = new Shader(GL,shader_vertex_source,shader_fragment_source);
+  shader.compileShaders();
+  shader.attachAndLinkShaders();
+  
+  var _color = GL.getAttribLocation(shader.program, "color");
+  var _position = GL.getAttribLocation(shader.program, "position");
 
   GL.enableVertexAttribArray(_color);
   GL.enableVertexAttribArray(_position);
 
-  GL.useProgram(SHADER_PROGRAM);
+  GL.useProgram(shader.program);
 
 
   /*========================= THE TRIANGLE ========================= */
