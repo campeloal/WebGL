@@ -21,13 +21,33 @@ var getWebGLContext=function(CANVAS){
   return GL;
 };
 
-Shader = function(GL,vertexShaderSource,fragmentShaderSource){
+Shader = function(GL){
   this.GL = GL;
-  this.vertexShaderSource = vertexShaderSource;
-  this.fragmentShaderSource = fragmentShaderSource;
+  this.vertexShaderSource = null;
+  this.fragmentShaderSource = null;
   this.vertexShader;
   this.fragmentShader;
   this.program;
+
+  var readFile = function(fileName) {
+    var result;
+
+    $.ajax({
+      async: false,
+      url: fileName,
+      success: function (data) {    
+          result = data;
+      },
+      dataType: 'text'
+    });
+
+    return result;
+  };
+
+  this.loadShaderFiles = function(vertexShaderFile,fragmentShaderFile) {
+    this.vertexShaderSource = readFile(vertexShaderFile);
+    this.fragmentShaderSource = readFile(fragmentShaderFile);
+  };
 
   this.compileShaders=function() {
     this.vertexShader = GL.createShader(GL.VERTEX_SHADER);
@@ -65,29 +85,9 @@ var main=function() {
   
   
   /*========================= SHADERS ========================= */
-  var shader_vertex_source="\n\
-attribute vec2 position; //the position of the point\n\
-attribute vec3 color;  //the color of the point\n\
-\n\
-varying vec3 vColor;\n\
-void main(void) { //pre-built function\n\
-gl_Position = vec4(position, 0., 1.); //0. is the z, and 1 is w\n\
-vColor=color;\n\
-}";
-
-
-  var shader_fragment_source="\n\
-precision mediump float;\n\
-\n\
-\n\
-\n\
-varying vec3 vColor;\n\
-void main(void) {\n\
-gl_FragColor = vec4(vColor, 1.);\n\
-}";
-
-
-  var shader = new Shader(GL,shader_vertex_source,shader_fragment_source);
+  
+  var shader = new Shader(GL);
+  shader.loadShaderFiles('./vertex_shader.glsl','./fragment_shader.glsl');
   shader.compileShaders();
   shader.attachAndLinkShaders();
   
@@ -101,7 +101,7 @@ gl_FragColor = vec4(vColor, 1.);\n\
 
 
   /*========================= THE TRIANGLE ========================= */
-  //POINTS :
+  
   var triangle_vertex=[
     -1,-1, //first summit -> bottom left of the viewport
     0,0,1,
